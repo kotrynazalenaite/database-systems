@@ -1,0 +1,310 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>University DB CRUD Interface</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        h1, h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background-color: white; border-radius: 8px; overflow: hidden; }
+        th, td { border: 1px solid #e0e0e0; padding: 12px; text-align: left; }
+        th { background-color: #eaf4ff; font-weight: 600; }
+        form { margin-bottom: 20px; padding: 20px; border: 1px solid #cceeff; border-radius: 8px; background-color: #f8fcff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .form-group { display: flex; align-items: center; margin-bottom: 15px; }
+        .form-group label { margin-right: 15px; font-weight: 500; min-width: 150px; }
+        .danger { background-color: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        .danger:hover { background-color: #c82333; }
+        .action-button { background-color: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; transition: background-color 0.3s; }
+        .action-button:hover { background-color: #1e7e34; }
+        select, input[type="text"], input[type="email"] { 
+            padding: 10px; 
+            margin-right: 15px; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px;
+            box-sizing: border-box;
+            min-width: 250px;
+        }
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(2px);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 80%;
+            max-width: 500px;
+            animation: fadeIn 0.3s;
+        }
+        .modal-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close:hover,
+        .modal-close:focus {
+            color: #000;
+            text-decoration: none;
+        }
+        .detail-table {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .detail-table th, .detail-table td {
+            padding: 8px;
+            text-align: left;
+            border: none;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        .clickable {
+            color: #007bff;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <h1>University Database CRUD Interface</h1>
+    
+    <!-- 1. READ/JOIN Section: Displays the joined data -->
+    <h2>1. READ & JOIN: Student Enrollments</h2>
+    <p>Click on the **Course Name** or **Teacher Name** to view details.</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Course Name</th>
+                <th>Teacher Name</th>
+                <th>Action (D)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in enrollments %}
+            <tr>
+                <td>{{ row.student_number }}</td>
+                <td>{{ row.StudentName }}</td>
+                <td>{{ row.StudentEmail or 'N/A' }}</td>
+                <td>
+                    {% if row.course_number %}
+                    <span class="clickable" onclick="getCourseDetails('{{ row.course_number }}')">
+                        {{ row.course_name }} ({{ row.course_number }})
+                    </span>
+                    {% else %}
+                        Not Enrolled
+                    {% endif %}
+                </td>
+                <td>
+                    {% if row.TeacherNumber %}
+                    <span class="clickable" onclick="getTeacherDetails('{{ row.TeacherNumber }}')">
+                        {{ row.TeacherName or 'N/A' }}
+                    </span>
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>
+                    <!-- DELETE operation is performed via this form -->
+                    <form method="POST" action="{{ url_for('delete_student', student_num=row.student_number) }}" style="display:inline;">
+                        <button type="submit" class="danger" onclick="return confirm('WARNING: Are you sure you want to delete {{ row.StudentName }}? This removes all related enrollments.');">Delete (D)</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not enrollments %}
+            <tr>
+                <td colspan="7" style="text-align: center;">No students or enrollments found. Check your database setup.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <hr>
+    
+    <!-- 2. CRUD: CREATE Operation (Combined Student and Enrollment Form) -->
+    <h2>2. CREATE: Register New Student and Enroll</h2>
+    <form method="POST" action="{{ url_for('add_enrollment') }}">
+        <div class="form-group">
+            <label for="student_number">Student ID:</label>
+            <input type="text" name="student_number" placeholder="e.g., S1003" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" name="name" placeholder="Full Name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" name="email" placeholder="example@uni.edu" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="course_number">Select Course to Enroll:</label>
+            <select name="course_number" required>
+                <option value="">-- Select a Course --</option>
+                {% for course in courses %}
+                <option value="{{ course.course_number }}">{{ course.course_name }} ({{ course.course_number }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" class="action-button">Register & Enroll (C)</button>
+    </form>
+    
+    <hr>
+
+    <!-- 3. NEW SECTION: Display Teachers -->
+    <h2>3. Random Teacher Database</h2>
+    <p>This is the current list of 5 randomly generated teachers in the database.</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Teacher ID</th>
+                <th>Name</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# The 'teachers' variable must be passed from the Flask route (app.py) #}
+            {% for teacher in teachers %}
+            <tr>
+                <td>{{ teacher.teacher_number }}</td>
+                <td>{{ teacher.name }}</td>
+                <td>{{ teacher.email }}</td>
+            </tr>
+            {% endfor %}
+            {% if not teachers %}
+            <tr>
+                <td colspan="3" style="text-align: center;">No teachers found. Check database setup in app.py.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    
+    <hr>
+
+    <!-- 4. CRUD: UPDATE Operation (Update Email) -->
+    <h2>4. UPDATE: Student Email</h2>
+    <form method="POST" action="{{ url_for('update_email') }}">
+        <div class="form-group">
+            <label for="student_number">Select Student to Update:</label>
+            <select name="student_number" required>
+                {% for student in students %}
+                <option value="{{ student.student_number }}">{{ student.name }} ({{ student.student_number }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="new_email">New Email:</label>
+            <input type="email" name="new_email" placeholder="new.email@uni.edu" required>
+        </div>
+        
+        <button type="submit" class="action-button">Update Email (U)</button>
+    </form>
+
+    <!-- Custom Modal/Dialog Box for Details -->
+    <div id="detailsModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('detailsModal').style.display='none'">&times;</span>
+            <h3 id="modalTitle">Details</h3>
+            <div id="modalBody">
+                <!-- Content will be injected here -->
+            </div>
+            <button class="action-button" style="margin-top: 20px; float: right;" onclick="document.getElementById('detailsModal').style.display='none'">Close</button>
+        </div>
+    </div>
+    
+    <script>
+        // Function to close modal when clicking the overlay
+        function closeModal(event) {
+            if (event.target.id === 'detailsModal') {
+                document.getElementById('detailsModal').style.display = 'none';
+            }
+        }
+
+        /**
+         * Fetches and displays teacher details (ID, Name, Email) in a modal.
+         * @param {string} teacherId - The ID of the teacher to fetch.
+         */
+        function getTeacherDetails(teacherId) {
+            fetch(`/get_teacher_details/${teacherId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const modal = document.getElementById('detailsModal');
+                    document.getElementById('modalTitle').textContent = `Teacher Details: ${data.name}`;
+                    
+                    document.getElementById('modalBody').innerHTML = `
+                        <table class="detail-table">
+                            <tr><th>Teacher ID</th><td>${data.teacher_number}</td></tr>
+                            <tr><th>Contact Name</th><td>${data.name}</td></tr>
+                            <tr><th>Email</th><td>${data.email}</td></tr>
+                        </table>
+                    `;
+                    modal.style.display = 'flex';
+                })
+                .catch(error => {
+                    console.error('Error fetching teacher details:', error);
+                    alert('Could not fetch teacher details.'); // Use simple alert for errors as fallback
+                });
+        }
+
+        /**
+         * Fetches and displays course details (Name, Location) in a modal.
+         * @param {string} courseId - The ID of the course to fetch.
+         */
+        function getCourseDetails(courseId) {
+            fetch(`/get_course_details/${courseId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const modal = document.getElementById('detailsModal');
+                    document.getElementById('modalTitle').textContent = `Course Details: ${data.course_name}`;
+                    
+                    document.getElementById('modalBody').innerHTML = `
+                        <table class="detail-table">
+                            <tr><th>Course Name</th><td>${data.course_name}</td></tr>
+                            <tr><th>Course Location</th><td>${data.course_location}</td></tr>
+                        </table>
+                    `;
+                    modal.style.display = 'flex';
+                })
+                .catch(error => {
+                    console.error('Error fetching course details:', error);
+                    alert('Could not fetch course details.'); // Use simple alert for errors as fallback
+                });
+        }
+    </script>
+    
+</body>
+</html>
