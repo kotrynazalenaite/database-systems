@@ -10,7 +10,7 @@ load_dotenv()
 
 app = Flask(__name__)
 MONGO_URI = os.getenv("MONGO_URI")
-
+print(MONGO_URI)
 # Connect to MongoDB Atlas
 try:
     client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)

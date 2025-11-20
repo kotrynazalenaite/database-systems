@@ -22,8 +22,8 @@
                 <p>Post added successfully!</p>
             </div>
         {% endif %}
-
-        <form action="{{ url_for('add_post') }}" method="post" class="space-y-6">
+            <!-- debug add_post-> add_recipe -->
+        <form action="{{ url_for('add_recipe') }}" method="post" class="space-y-6">
             <div>
                 <label for="post_content" class="block text-sm font-medium text-gray-700">Post Content</label>
                 <textarea id="post_content" name="post_content" rows="4" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3"></textarea>
