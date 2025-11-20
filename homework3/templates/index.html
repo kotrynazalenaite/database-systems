@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipe Tracker - Home</title>
+</head>
+<body>
+    <h1>📋 All Recipes</h1>
+    
+    <p><a href="{{ url_for('add_recipe') }}">➕ Add New Recipe</a></p>
+    <hr>
+    
+    {% if recipes %}
+        {% else %}
+        <p>No recipes found. Start by adding one!</p>
+    {% endif %}
+
+</body>
+</html>
