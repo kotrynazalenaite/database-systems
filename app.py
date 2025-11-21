@@ -1,75 +1,98 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for
-import mysql.connector
+from pymongo import MongoClient
+from dotenv import load_dotenv
+from bson.objectid import ObjectId # To handle MongoDB IDs
 
-# Create a Flask web application instance
+# --- 1. Configuration & Setup ---
+# Load environment variables (like MONGO_URI) from the .env file
+load_dotenv()
+
 app = Flask(__name__)
+MONGO_URI = os.getenv("MONGO_URI")
 
-# Database configuration with your details
-db_config = {
-    'user': 'root',
-    'password': 'Bajorai123',  # Password is empty as requested
-    'host': 'localhost',
-    'database': 'testdb'
-}
+# Connect to MongoDB Atlas
+try:
+    client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
+    db = client.recipe_db  # The database where recipes will be stored
+    recipes_collection = db.recipes # The collection for the recipe documents
+    print("Successfully connected to MongoDB.")
+except Exception as e:
+    print(f"Error connecting to MongoDB: {e}")
+    # Application should not start if connection fails (in a real scenario)
 
-# ---
-# This function is a helper to connect to the database.
-# It's a good practice to centralize your connection logic.
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(**db_config)
-        return connection
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-        return None
+# --- 2. Routes and Logic ---
 
-# ---
-# This route displays the form for the user to submit a post.
+# Home Page: Display a list of all recipes
 @app.route('/')
 def index():
-    # Pass a success message to the template if it exists
-    success_message = request.args.get('success')
-    return render_template('index.html', success_message=success_message)
+    """Fetches all recipes from MongoDB and displays them."""
+    # Find all documents in the collection, sorted by name
+    all_recipes = list(recipes_collection.find().sort("name", 1))
+    # Render the index.html template, passing the recipe list
+    return render_template('index.html', recipes=all_recipes)
 
-# ---
-# This route handles the form submission and inserts data into the database.
-@app.route('/add_post', methods=['POST'])
-def add_post():
-    # Get the data from the form
-    post_content = request.form['post_content']
+# Add Recipe Page: Handles both displaying the form (GET) and submitting data (POST)
+@app.route('/add', methods=['GET', 'POST'])
+def add_recipe():
+    """Handles submission of a new recipe, including multiple ingredients."""
+    if request.method == 'POST':
+        # Get basic recipe info from the form
+        recipe_name = request.form['name']
+        instructions = request.form['instructions']
+        cook_time = request.form['cook_time']
 
-    # Get a database connection
-    conn = get_db_connection()
-    if conn is None:
-        return "Database connection failed.", 500
+        # Handle Multiple Ingredients (The HW Requirement)
+        # request.form.getlist() captures ALL values from inputs with the same name
+        ingredient_names = request.form.getlist('ingredient_name')
+        quantities = request.form.getlist('quantity')
+        units = request.form.getlist('unit')
 
-    cursor = conn.cursor()
+        ingredients_list = []
+        # Combine the lists into a structured array of dictionaries
+        for name, qty, unit in zip(ingredient_names, quantities, units):
+            # Ensure we only save ingredients that have a name entered
+            if name.strip():
+                ingredients_list.append({
+                    "name": name.strip(),
+                    "quantity": qty.strip(),
+                    "unit": unit.strip()
+                })
 
+        # Construct the final document
+        recipe_doc = {
+            "name": recipe_name,
+            "instructions": instructions,
+            "cook_time": cook_time,
+            "ingredients": ingredients_list # This is the embedded array of multiple entries
+        }
+
+        # Insert the document into MongoDB
+        recipes_collection.insert_one(recipe_doc)
+
+        # Redirect back to the home page after saving
+        return redirect(url_for('index'))
+
+    # For a GET request, just show the form
+    return render_template('add_recipe.html')
+
+# Recipe Detail Page: View a single recipe by its MongoDB ID
+@app.route('/recipe/<recipe_id>')
+def recipe_detail(recipe_id):
+    """Fetches a single recipe document using its ObjectId."""
     try:
-        # SQL statement to insert data into the example_table
-        sql = "INSERT INTO example_table (post) VALUES (%s)"
-        # The data to be inserted
-        data = (post_content,)
+        # Convert the string ID from the URL into a MongoDB ObjectId
+        recipe = recipes_collection.find_one({"_id": ObjectId(recipe_id)})
         
-        # Execute the SQL statement
-        cursor.execute(sql, data)
-        
-        # Commit the changes to the database
-        conn.commit()
+        if recipe:
+            return render_template('recipe_detail.html', recipe=recipe)
+        else:
+            return "Recipe not found", 404
+    except Exception as e:
+        # Handles cases where the ID format is invalid
+        return f"Invalid ID format or database error: {e}", 400
 
-        # Redirect back to the home page with a success message
-        return redirect(url_for('index', success='true'))
-
-    except mysql.connector.Error as err:
-        print(f"Error inserting data: {err}")
-        conn.rollback()  # Roll back the transaction if an error occurs
-        return "Failed to insert post.", 500
-    finally:
-        # Close the cursor and connection to free up resources
-        cursor.close()
-        conn.close()
-
-# ---
-# Run the Flask application in debug mode
+# --- 3. Run the Application ---
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use PORT environment variable for deployment (Render), default to 5000 locally
+    app.run(debug=True, port=int(os.environ.get('PORT', 5010)))

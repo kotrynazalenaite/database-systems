@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ recipe.name }} Details</title>
+</head>
+<body>
+    <p><a href="{{ url_for('index') }}">← Back to Recipe List</a></p>
+    
+    <h1>{{ recipe.name }}</h1>
+    
+    <p><strong>Cook Time:</strong> {{ recipe.cook_time }}</p>
+    
+    <hr>
+
+    <h2>Ingredients</h2>
+    {% if recipe.ingredients %}
+        <ul>
+            {% for ingredient in recipe.ingredients %}
+                <li>{{ ingredient.quantity }} {{ ingredient.unit }} of {{ ingredient.name }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No ingredients listed.</p>
+    {% endif %}
+
+    <hr>
+    
+    <h2>Instructions</h2>
+    <p style="white-space: pre-wrap;">{{ recipe.instructions }}</p>
+
+</body>
+</html>
