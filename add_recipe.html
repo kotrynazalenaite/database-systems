@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add New Recipe</title>
+</head>
+<body>
+    <h1>➕ Add New Recipe</h1>
+    <p><a href="{{ url_for('index') }}">← Back to Recipe List</a></p>
+    
+    <form method="POST" action="{{ url_for('add_recipe') }}">
+        
+        <h2>Recipe Details</h2>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="cook_time">Cook Time:</label>
+        <input type="text" id="cook_time" name="cook_time" required><br><br>
+
+        <label for="instructions">Instructions:</label><br>
+        <textarea id="instructions" name="instructions" rows="6" cols="50" required></textarea><br><br>
+
+        <h2>Ingredients</h2>
+        
+        <div id="ingredients-container">
+            <div>
+                <input type="text" name="ingredient_name" placeholder="Ingredient Name" required>
+                <input type="text" name="quantity" placeholder="Quantity (e.g., 2)">
+                <input type="text" name="unit" placeholder="Unit (e.g., cups)">
+                <button type="button" onclick="this.parentNode.remove()">X</button>
+            </div>
+        </div>
+
+        <button type="button" onclick="addIngredient()">Add Ingredient</button>
+        <hr>
+
+        <button type="submit">Submit Recipe</button>
+    </form>
+
+    <script>
+        function addIngredient() {
+            const container = document.getElementById('ingredients-container');
+            const newDiv = document.createElement('div');
+            newDiv.innerHTML = `
+                <input type="text" name="ingredient_name" placeholder="Ingredient Name" required>
+                <input type="text" name="quantity" placeholder="Quantity (e.g., 2)">
+                <input type="text" name="unit" placeholder="Unit (e.g., cups)">
+                <button type="button" onclick="this.parentNode.remove()">X</button>
+            `;
+            container.appendChild(newDiv);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipe Tracker - Home</title>
+</head>
+<body>
+    <h1>📋 All Recipes</h1>
+    
+    <p><a href="{{ url_for('add_recipe') }}">➕ Add New Recipe</a></p>
+    <hr>
+    
+    <form method="POST" action="{{ url_for('delete_recipes') }}">
+
+        {% if recipes %}
+            
+            <button type="submit" style="margin-bottom: 10px;">🗑️ Delete Selected Recipes</button> 
+            
+            <ul>
+                {% for recipe in recipes %}
+                    <li>
+                        <input type="checkbox" 
+                               name="selected_recipes" 
+                               value="{{ recipe._id }}">
+                        
+                        <a href="{{ url_for('recipe_detail', recipe_id=recipe._id) }}">
+                            <strong>{{ recipe.name }}</strong>
+                        </a>
+                        (Cook Time: {{ recipe.cook_time }})
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No recipes found. Start by adding one!</p>
+        {% endif %}
+
+    </form>
+</body>
+</html>
